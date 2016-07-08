@@ -11,6 +11,7 @@ using Microsoft.IdentityModel.Tokens;
 using WebApp_OpenIDConnect_DotNet.PolicyAuthHelpers;
 using System.Globalization;
 using System.Threading;
+using Microsoft.AspNetCore.Authentication;
 
 namespace WebApp_OpenIDConnect_DotNet
 {
@@ -20,6 +21,10 @@ namespace WebApp_OpenIDConnect_DotNet
         public const string AcrClaimType = "http://schemas.microsoft.com/claims/authnclassreference";
         public const string PolicyKey = "b2cpolicy";
         public const string OIDCMetadataSuffix = "/.well-known/openid-configuration";
+
+        public static string SignUpPolicyId;
+        public static string SignInPolicyId;
+        public static string ProfilePolicyId;
 
         public Startup(IHostingEnvironment env)
         {
@@ -65,9 +70,9 @@ namespace WebApp_OpenIDConnect_DotNet
             var redirectUri = Configuration["AzureAD:RedirectUri"];
 
             // B2C policy identifiers
-            var SignUpPolicyId = Configuration["AzureAD:SignUpPolicyId"];
-            var SignInPolicyId = Configuration["AzureAD:SignInPolicyId"];
-            var ProfilePolicyId = Configuration["AzureAD:UserProfilePolicyId"];
+            SignUpPolicyId = Configuration["AzureAD:SignUpPolicyId"];
+            SignInPolicyId = Configuration["AzureAD:SignInPolicyId"];
+            ProfilePolicyId = Configuration["AzureAD:UserProfilePolicyId"];
 
         // Configure the OWIN pipeline to use OpenID Connect auth.
         app.UseOpenIdConnectAuthentication(new OpenIdConnectOptions
@@ -78,7 +83,7 @@ namespace WebApp_OpenIDConnect_DotNet
                 PostLogoutRedirectUri = redirectUri,
                 Events = new OpenIdConnectEvents
                 {
-                    OnAuthenticationFailed = AuthenticationFailed,
+                    OnRemoteFailure = RemoteFailure,
                     OnRedirectToIdentityProvider = RedirectToIdentityProvider,
                 },
                 ResponseType = "id_token",
@@ -109,23 +114,23 @@ namespace WebApp_OpenIDConnect_DotNet
         private async Task RedirectToIdentityProvider(RedirectContext context)
         {
             PolicyConfigurationManager mgr = context.Options.ConfigurationManager as PolicyConfigurationManager;
-            if (context.ProtocolMessage.RequestType == OpenIdConnectRequestType.LogoutRequest)
+            if (context.ProtocolMessage.RequestType == OpenIdConnectRequestType.Logout)
             {
-                OpenIdConnectConfiguration config = await mgr.GetConfigurationByPolicyAsync(CancellationToken.None, context.OwinContext.Authentication.AuthenticationResponseRevoke.Properties.Dictionary[Startup.PolicyKey]);
+                OpenIdConnectConfiguration config = await mgr.GetConfigurationByPolicyAsync(CancellationToken.None, context.Properties.Items[Startup.PolicyKey]);
                 context.ProtocolMessage.IssuerAddress = config.EndSessionEndpoint;
             }
             else
             {
-                OpenIdConnectConfiguration config = await mgr.GetConfigurationByPolicyAsync(CancellationToken.None, context.OwinContext.Authentication.AuthenticationResponseChallenge.Properties.Dictionary[Startup.PolicyKey]);
+                OpenIdConnectConfiguration config = await mgr.GetConfigurationByPolicyAsync(CancellationToken.None, context.Properties.Items[Startup.PolicyKey]);
                 context.ProtocolMessage.IssuerAddress = config.AuthorizationEndpoint;
             }
         }
 
         // Used for avoiding yellow-screen-of-death
-        private Task AuthenticationFailed(AuthenticationFailedContext context)
+        private Task RemoteFailure(FailureContext context)
         {
             context.HandleResponse();
-            context.Response.Redirect("/Home/Error?message=" + context.Exception.Message);
+            context.Response.Redirect("/Home/Error?message=" + context.Failure.Message);
             return Task.FromResult(0);
         }
     }
