@@ -8,23 +8,22 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
-using WebApp_OpenIDConnect_DotNet.PolicyAuthHelpers;
 using System.Globalization;
 using System.Threading;
 using Microsoft.AspNetCore.Authentication;
+using System;
 
 namespace WebApp_OpenIDConnect_DotNet
 {
     public class Startup
     {
-        // The ACR claim is used to indicate which policy was executed
-        public const string AcrClaimType = "http://schemas.microsoft.com/claims/authnclassreference";
-        public const string PolicyKey = "b2cpolicy";
-        public const string OIDCMetadataSuffix = "/.well-known/openid-configuration";
-
         public static string SignUpPolicyId;
         public static string SignInPolicyId;
         public static string ProfilePolicyId;
+        public static string ClientId;
+        public static string RedirectUri;
+        public static string AadInstance;
+        public static string Tenant;
 
         public Startup(IHostingEnvironment env)
         {
@@ -55,7 +54,8 @@ namespace WebApp_OpenIDConnect_DotNet
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
 
             // Configure error handling middleware.
-            app.UseExceptionHandler("/Home/Error");
+            //app.UseExceptionHandler("/Home/Error");
+            app.UseDeveloperExceptionPage();
 
             // Add static files to the request pipeline.
             app.UseStaticFiles();
@@ -64,42 +64,19 @@ namespace WebApp_OpenIDConnect_DotNet
             app.UseCookieAuthentication(new CookieAuthenticationOptions());
             
             // App config settings
-            var clientId = Configuration["AzureAD:ClientId"];
-            var aadInstance = Configuration["AzureAD:AadInstance"];
-            var tenant = Configuration["AzureAD:Tenant"];
-            var redirectUri = Configuration["AzureAD:RedirectUri"];
+            ClientId = Configuration["AzureAD:ClientId"];
+            AadInstance = Configuration["AzureAD:AadInstance"];
+            Tenant = Configuration["AzureAD:Tenant"];
+            RedirectUri = Configuration["AzureAD:RedirectUri"];
 
             // B2C policy identifiers
             SignUpPolicyId = Configuration["AzureAD:SignUpPolicyId"];
             SignInPolicyId = Configuration["AzureAD:SignInPolicyId"];
-            ProfilePolicyId = Configuration["AzureAD:UserProfilePolicyId"];
 
-        // Configure the OWIN pipeline to use OpenID Connect auth.
-        app.UseOpenIdConnectAuthentication(new OpenIdConnectOptions
-            {
-                // These are standard OpenID Connect parameters, with values pulled from web.config
-                ClientId = clientId,
-                //RedirectUri = redirectUri,
-                PostLogoutRedirectUri = redirectUri,
-                Events = new OpenIdConnectEvents
-                {
-                    OnRemoteFailure = RemoteFailure,
-                    OnRedirectToIdentityProvider = RedirectToIdentityProvider,
-                },
-                ResponseType = "id_token",
-                
-                // The PolicyConfigurationManager takes care of getting the correct Azure AD authentication
-                // endpoints from the OpenID Connect metadata endpoint.  It is included in the PolicyAuthHelpers folder.
-                ConfigurationManager = new PolicyConfigurationManager(
-                    string.Format(CultureInfo.InvariantCulture, aadInstance, tenant, "/v2.0", OIDCMetadataSuffix),
-                    new string[] { SignUpPolicyId, SignInPolicyId, ProfilePolicyId }),
-
-                // This piece is optional - it is used for displaying the user's name in the navigation bar.
-                TokenValidationParameters = new TokenValidationParameters
-                {
-                    NameClaimType = "name",
-                },
-            });
+            // Configure the OWIN pipeline to use OpenID Connect auth.
+            // BUG: https://github.com/aspnet/Security/issues/912
+            app.UseOpenIdConnectAuthentication(CreateOptionsFromPolicy(SignUpPolicyId));
+            app.UseOpenIdConnectAuthentication(CreateOptionsFromPolicy(SignInPolicyId));
 
             // Configure MVC routes
             app.UseMvc(routes =>
@@ -110,20 +87,30 @@ namespace WebApp_OpenIDConnect_DotNet
             });
         }
 
-        // This notification can be used to manipulate the OIDC request before it is sent.  Here we use it to send the correct policy.
-        private async Task RedirectToIdentityProvider(RedirectContext context)
+        private OpenIdConnectOptions CreateOptionsFromPolicy(string policy)
         {
-            PolicyConfigurationManager mgr = context.Options.ConfigurationManager as PolicyConfigurationManager;
-            if (context.ProtocolMessage.RequestType == OpenIdConnectRequestType.Logout)
+            return new OpenIdConnectOptions
             {
-                OpenIdConnectConfiguration config = await mgr.GetConfigurationByPolicyAsync(CancellationToken.None, context.Properties.Items[Startup.PolicyKey]);
-                context.ProtocolMessage.IssuerAddress = config.EndSessionEndpoint;
-            }
-            else
-            {
-                OpenIdConnectConfiguration config = await mgr.GetConfigurationByPolicyAsync(CancellationToken.None, context.Properties.Items[Startup.PolicyKey]);
-                context.ProtocolMessage.IssuerAddress = config.AuthorizationEndpoint;
-            }
+                // For each policy, give OWIN the policy-specific metadata address, and
+                // set the authentication type to the id of the policy
+                MetadataAddress = string.Format(AadInstance, Tenant, policy),
+                AuthenticationScheme = policy,
+
+                // These are standard OpenID Connect parameters, with values pulled from config.json
+                ClientId = ClientId,
+                PostLogoutRedirectUri = RedirectUri,
+                Events = new OpenIdConnectEvents
+                {
+                    OnRemoteFailure = RemoteFailure,
+                },
+                ResponseType = OpenIdConnectResponseType.IdToken,
+
+                // This piece is optional - it is used for displaying the user's name in the navigation bar.
+                TokenValidationParameters = new TokenValidationParameters
+                {
+                    NameClaimType = "name",
+                },
+            };
         }
 
         // Used for avoiding yellow-screen-of-death

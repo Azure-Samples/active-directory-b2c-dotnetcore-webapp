@@ -16,28 +16,37 @@ namespace WebApp_OpenIDConnect_DotNet.Controllers
     {
         // GET: /Account/Login
         [HttpGet]
-        public async Task Login()
+        public async Task SignUp()
         {
-            var authenticationProperties = new AuthenticationProperties { RedirectUri = "/" };
-            authenticationProperties.Items.Add(Startup.PolicyKey, Startup.SignInPolicyId);
-
             if (HttpContext.User == null || !HttpContext.User.Identity.IsAuthenticated)
-                await HttpContext.Authentication.ChallengeAsync(
-                    OpenIdConnectDefaults.AuthenticationScheme,
-                    authenticationProperties);
+            {
+                var authenticationProperties = new AuthenticationProperties { RedirectUri = "/" };
+                await HttpContext.Authentication.ChallengeAsync(Startup.SignUpPolicyId, authenticationProperties);
+            }
+        }
+
+        // GET: /Account/Login
+        [HttpGet]
+        public async Task SignIn()
+        {
+            // BUG: ASP.NET needs to allow for multiple instances of the OIDC middleware with different schemes.
+            if (HttpContext.User == null || !HttpContext.User.Identity.IsAuthenticated)
+            {
+                var authenticationProperties = new AuthenticationProperties { RedirectUri = "/" };
+                await HttpContext.Authentication.ChallengeAsync(Startup.SignInPolicyId, authenticationProperties);
+            }
         }
 
         // GET: /Account/LogOff
         [HttpGet]
         public async Task LogOff()
         {
-            if (HttpContext.User.Identity.IsAuthenticated)
+            if (HttpContext.User != null && HttpContext.User.Identity.IsAuthenticated)
             {
-                var authenticationProperties = new AuthenticationProperties { RedirectUri = "/" };
-                authenticationProperties.Items.Add(Startup.PolicyKey, HttpContext.User.FindFirst(Startup.AcrClaimType).Value);
-
-                await HttpContext.Authentication.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme, authenticationProperties);
                 await HttpContext.Authentication.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                await HttpContext.Authentication.SignOutAsync(Startup.SignInPolicyId);
+                await HttpContext.Authentication.SignOutAsync(Startup.SignUpPolicyId);
+                // BUG: https://github.com/aspnet/Security/issues/911
             }
         }
     }

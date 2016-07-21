@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WebApp_OpenIDConnect_DotNet.Controllers
@@ -13,10 +14,10 @@ namespace WebApp_OpenIDConnect_DotNet.Controllers
             return View();
         }
 
+        [Authorize]
         public IActionResult About()
         {
-            ViewData["Message"] = "Your application description page.";
-
+            ViewData["Message"] = String.Format("Claims available for the user {0}", (User.FindFirst("name")?.Value));
             return View();
         }
 
