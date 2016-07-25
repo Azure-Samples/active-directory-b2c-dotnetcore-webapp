@@ -12,6 +12,7 @@ using System.Globalization;
 using System.Threading;
 using Microsoft.AspNetCore.Authentication;
 using System;
+using Microsoft.AspNetCore.Http;
 
 namespace WebApp_OpenIDConnect_DotNet
 {
@@ -53,9 +54,9 @@ namespace WebApp_OpenIDConnect_DotNet
             // Add the console logger.
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
 
-            // Configure error handling middleware.
-            //app.UseExceptionHandler("/Home/Error");
+            // Configure error handling middleware. UseDeveloperExceptionPage to show 
             app.UseDeveloperExceptionPage();
+            //app.UseExceptionHandler("/Home/Error");
 
             // Add static files to the request pipeline.
             app.UseStaticFiles();
@@ -74,7 +75,6 @@ namespace WebApp_OpenIDConnect_DotNet
             SignInPolicyId = Configuration["AzureAD:SignInPolicyId"];
 
             // Configure the OWIN pipeline to use OpenID Connect auth.
-            // BUG: https://github.com/aspnet/Security/issues/912
             app.UseOpenIdConnectAuthentication(CreateOptionsFromPolicy(SignUpPolicyId));
             app.UseOpenIdConnectAuthentication(CreateOptionsFromPolicy(SignInPolicyId));
 
@@ -89,12 +89,14 @@ namespace WebApp_OpenIDConnect_DotNet
 
         private OpenIdConnectOptions CreateOptionsFromPolicy(string policy)
         {
+            policy = policy.ToLower();
             return new OpenIdConnectOptions
             {
                 // For each policy, give OWIN the policy-specific metadata address, and
                 // set the authentication type to the id of the policy
                 MetadataAddress = string.Format(AadInstance, Tenant, policy),
                 AuthenticationScheme = policy,
+                CallbackPath = new PathString(string.Format("/{0}", policy)),
 
                 // These are standard OpenID Connect parameters, with values pulled from config.json
                 ClientId = ClientId,

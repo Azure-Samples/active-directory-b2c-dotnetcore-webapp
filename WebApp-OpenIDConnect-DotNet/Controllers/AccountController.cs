@@ -21,7 +21,7 @@ namespace WebApp_OpenIDConnect_DotNet.Controllers
             if (HttpContext.User == null || !HttpContext.User.Identity.IsAuthenticated)
             {
                 var authenticationProperties = new AuthenticationProperties { RedirectUri = "/" };
-                await HttpContext.Authentication.ChallengeAsync(Startup.SignUpPolicyId, authenticationProperties);
+                await HttpContext.Authentication.ChallengeAsync(Startup.SignUpPolicyId.ToLower(), authenticationProperties);
             }
         }
 
@@ -29,11 +29,10 @@ namespace WebApp_OpenIDConnect_DotNet.Controllers
         [HttpGet]
         public async Task SignIn()
         {
-            // BUG: ASP.NET needs to allow for multiple instances of the OIDC middleware with different schemes.
             if (HttpContext.User == null || !HttpContext.User.Identity.IsAuthenticated)
             {
                 var authenticationProperties = new AuthenticationProperties { RedirectUri = "/" };
-                await HttpContext.Authentication.ChallengeAsync(Startup.SignInPolicyId, authenticationProperties);
+                await HttpContext.Authentication.ChallengeAsync(Startup.SignInPolicyId.ToLower(), authenticationProperties);
             }
         }
 
@@ -43,10 +42,9 @@ namespace WebApp_OpenIDConnect_DotNet.Controllers
         {
             if (HttpContext.User != null && HttpContext.User.Identity.IsAuthenticated)
             {
+                string scheme = (HttpContext.User.FindFirst("http://schemas.microsoft.com/claims/authnclassreference"))?.Value;
                 await HttpContext.Authentication.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-                await HttpContext.Authentication.SignOutAsync(Startup.SignInPolicyId);
-                await HttpContext.Authentication.SignOutAsync(Startup.SignUpPolicyId);
-                // BUG: https://github.com/aspnet/Security/issues/911
+                await HttpContext.Authentication.SignOutAsync(scheme.ToLower(), new AuthenticationProperties { RedirectUri = "/" });
             }
         }
     }
