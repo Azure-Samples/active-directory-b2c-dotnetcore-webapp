@@ -119,7 +119,15 @@ namespace WebApp_OpenIDConnect_DotNet
         private Task RemoteFailure(FailureContext context)
         {
             context.HandleResponse();
-            context.Response.Redirect("/Home/Error?message=" + context.Failure.Message);
+            if (context.Failure is OpenIdConnectProtocolException && context.Failure.Message.Contains("access_denied"))
+            {
+                context.Response.Redirect("/");
+            }
+            else
+            {
+                context.Response.Redirect("/Home/Error?message=" + context.Failure.Message);
+            }
+
             return Task.FromResult(0);
         }
     }
