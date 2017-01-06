@@ -42,7 +42,13 @@ namespace WebApp_OpenIDConnect_DotNet.Controllers
         {
             if (HttpContext.User != null && HttpContext.User.Identity.IsAuthenticated)
             {
-                string scheme = (HttpContext.User.FindFirst("http://schemas.microsoft.com/claims/authnclassreference"))?.Value;
+                // try to find the tfp policy id claim (default)
+                var scheme = (HttpContext.User.FindFirst("tfp"))?.Value;
+
+                // fall back to legacy acr policy id claim
+                if (string.IsNullOrEmpty(scheme))
+                    scheme = (HttpContext.User.FindFirst("http://schemas.microsoft.com/claims/authnclassreference"))?.Value;
+
                 await HttpContext.Authentication.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
                 await HttpContext.Authentication.SignOutAsync(scheme.ToLower(), new AuthenticationProperties { RedirectUri = "/" });
             }
