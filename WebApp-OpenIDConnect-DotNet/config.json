@@ -3,7 +3,7 @@
         "ClientId": "90c0fe63-bcf2-44d5-8fb7-b8bbc0b29dc6",
         "Tenant": "fabrikamb2c.onmicrosoft.com",
         "AadInstance": "https://login.microsoftonline.com/{0}/v2.0/.well-known/openid-configuration?p={1}", // This is the public instance of Azure AD
-        "PostLogoutRedirectUri": "https://localhost:44316/",
+        "RedirectUri": "https://localhost:44316/",
 
         "SignUpPolicyId": "B2C_1_sign_up",
         "SignInPolicyId": "B2C_1_sign_in",
