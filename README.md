@@ -44,7 +44,7 @@ If you already have existing policies in your B2C tenant, feel free to re-use th
 Now you need to create your own appliation in your B2C tenant, so that your app has its own client ID.  You can do so following [the generic instructions here](https://azure.microsoft.com/documentation/articles/active-directory-b2c-app-registration).  Be sure to include the following information in your app registration:
 
 - Enable the **Web App/Web API** setting for your application.
-- Add **two** rediect_uris for your app, one for each policy used in the sample.  Their values should take the form `https://localhost:44316/{your-policy-name}`, where your policy names begin with `b2c_1_`.
+- Add **two** redirect_uris for your app, one for each policy used in the sample.  Their values should take the form `https://localhost:44316/{your-policy-name}`, where your policy names begin with `b2c_1_`.
 - Copy the client ID generated for your application, so you can use it in the next step.
 
 ### Step 6: Configure the sample to use your B2C tenant
