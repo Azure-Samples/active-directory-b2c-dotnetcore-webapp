@@ -11,9 +11,9 @@ using Microsoft.AspNetCore.Authentication;
 
 namespace WebApp_OpenIDConnect_DotNet
 {
-    public class AzureAdB2COpenIdConnectOptionsSetup : IConfigureOptions<OpenIdConnectOptions>
+    public class OpenIdConnectOptionsSetup : IConfigureOptions<OpenIdConnectOptions>
     {
-        public AzureAdB2COpenIdConnectOptionsSetup(IOptions<AzureAdB2COptions> b2cOptions)
+        public OpenIdConnectOptionsSetup(IOptions<AzureAdB2COptions> b2cOptions)
         {
             AzureAdB2COptions = b2cOptions.Value;
         }

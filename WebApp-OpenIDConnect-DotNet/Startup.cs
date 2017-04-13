@@ -36,7 +36,7 @@ namespace WebApp_OpenIDConnect_DotNet
                 sharedOptions => sharedOptions.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme);
 
             services.Configure<AzureAdB2COptions>(Configuration.GetSection("Authentication:AzureAdB2C"));
-            services.AddSingleton<IConfigureOptions<OpenIdConnectOptions>, AzureAdB2COpenIdConnectOptionsSetup>();
+            services.AddSingleton<IConfigureOptions<OpenIdConnectOptions>, OpenIdConnectOptionsSetup>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
