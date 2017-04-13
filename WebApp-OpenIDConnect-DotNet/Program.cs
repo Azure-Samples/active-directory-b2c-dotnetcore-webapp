@@ -9,7 +9,6 @@ namespace WebApp_OpenIDConnect_DotNet
 {
     public class Program
     {
-        // Entry point for the application.
         public static void Main(string[] args)
         {
             var host = new WebHostBuilder()
