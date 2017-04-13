@@ -24,6 +24,7 @@ namespace WebApp_OpenIDConnect_DotNet
         {
             options.ClientId = AzureAdB2COptions.ClientId;
             options.Authority = AzureAdB2COptions.Authority;
+            
 
             // TODO: Is this needed? Is the default sufficient?
             options.TokenValidationParameters = new TokenValidationParameters() { NameClaimType = "name" };
@@ -38,27 +39,32 @@ namespace WebApp_OpenIDConnect_DotNet
         public async Task OnRedirectToIdentityProvider(RedirectContext context)
         {
             var defaultPolicy = AzureAdB2COptions.DefaultPolicy;
-            if (context.Properties.Items.TryGetValue("Policy", out var policy) && !policy.Equals(defaultPolicy))
+            if (context.Properties.Items.TryGetValue(AzureAdB2COptions.PolicyAuthenticationProperty, out var policy) && 
+                !policy.Equals(defaultPolicy))
             {
-                context.ProtocolMessage.Scope = OpenIdConnectParameterNames.Scope;
-                context.ProtocolMessage.ResponseType = OpenIdConnectParameterNames.IdToken;
+                context.ProtocolMessage.Scope = OpenIdConnectScope.OpenIdProfile;
+                context.ProtocolMessage.ResponseType = OpenIdConnectResponseType.IdToken;
                 context.ProtocolMessage.IssuerAddress = context.ProtocolMessage.IssuerAddress.Replace(defaultPolicy, policy);
+                context.Properties.Items.Remove(AzureAdB2COptions.PolicyAuthenticationProperty);
             }
         }
 
         public async Task OnRemoteFailure(FailureContext context)
         {
             context.HandleResponse();
-            // TODO: Figure out what to do about error when user tries to reset their password
-            // See https://github.com/Azure-Samples/b2c-dotnet-webapp-and-webapi/blob/master/TaskWebApp/App_Start/Startup.Auth.cs#L106-L112
-            if (context.Failure is OpenIdConnectProtocolException && context.Failure.Message.Contains("access_denied"))
+            // Handle the error code that Azure AD B2C throws when trying to reset a password from the login page 
+            // because password reset is not supported by a "sign-up or sign-in policy"
+            if (context.Failure is OpenIdConnectProtocolException && context.Failure.Message.Contains("AADB2C90118"))
             {
-                // TODO: Use UrlHelper?
+                // If the user clicked the reset password link, redirect to the reset password route
+                context.Response.Redirect("/Session/ResetPassword");
+            }
+            else if (context.Failure is OpenIdConnectProtocolException && context.Failure.Message.Contains("access_denied"))
+            {
                 context.Response.Redirect("/");
             }
             else
             {
-                // TODO: Use UrlHelper?
                 context.Response.Redirect("/Home/Error?message=" + context.Failure.Message);
             }
         }

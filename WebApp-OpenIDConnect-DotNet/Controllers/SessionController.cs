@@ -28,6 +28,14 @@ namespace WebApp_OpenIDConnect_DotNet.Controllers
         }
 
         [HttpGet]
+        public IActionResult ResetPassword()
+        {
+            var properties = new AuthenticationProperties() { RedirectUri = "/" };
+            properties.Items[AzureAdB2COptions.PolicyAuthenticationProperty] = AzureAdB2COptions.ResetPasswordPolicyId;
+            return Challenge(properties, OpenIdConnectDefaults.AuthenticationScheme);
+        }
+
+        [HttpGet]
         public IActionResult SignOut()
         {
             return SignOut(
