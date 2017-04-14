@@ -25,5 +25,9 @@ namespace WebApp_OpenIDConnect_DotNet
 
         public string DefaultPolicy => SignUpSignInPolicyId;
         public string Authority => $"{AzureAdB2CInstance}/{Tenant}/{DefaultPolicy}/v2.0";
+
+        public string ClientSecret { get; set; }
+        public string ApiUri { get; set; }
+        public string ApiScopes { get; set; }
     }
 }

@@ -21,6 +21,15 @@ namespace WebApp_OpenIDConnect_DotNet.Controllers
             return View();
         }
 
+        [Authorize]
+        public IActionResult Tasks()
+        {
+            // Call MSAL to get a token
+            // Call API
+            
+            return View();
+        }
+
         public IActionResult Error(string message)
         {
             ViewBag.Message = message;

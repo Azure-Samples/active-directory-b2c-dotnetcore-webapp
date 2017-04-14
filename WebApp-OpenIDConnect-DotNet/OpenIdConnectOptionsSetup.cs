@@ -24,13 +24,14 @@ namespace WebApp_OpenIDConnect_DotNet
         {
             options.ClientId = AzureAdB2COptions.ClientId;
             options.Authority = AzureAdB2COptions.Authority;
-            
+                        
             options.TokenValidationParameters = new TokenValidationParameters() { NameClaimType = "name" };
 
             options.Events = new OpenIdConnectEvents()
             {
                 OnRedirectToIdentityProvider = OnRedirectToIdentityProvider,
-                OnRemoteFailure = OnRemoteFailure
+                OnRemoteFailure = OnRemoteFailure,
+                OnAuthorizationCodeReceived = OnAuthorizationCodeReceived
             };
         }
 
@@ -44,6 +45,13 @@ namespace WebApp_OpenIDConnect_DotNet
                 context.ProtocolMessage.ResponseType = OpenIdConnectResponseType.IdToken;
                 context.ProtocolMessage.IssuerAddress = context.ProtocolMessage.IssuerAddress.Replace(defaultPolicy, policy);
                 context.Properties.Items.Remove(AzureAdB2COptions.PolicyAuthenticationProperty);
+            }
+            else if (!string.IsNullOrEmpty(AzureAdB2COptions.ApiUri)) {
+                context.ProtocolMessage.Scope = OpenIdConnectScope.OpenIdProfile;
+                foreach (var scope in AzureAdB2COptions.ApiScopes.Split(' ')) 
+                    context.ProtocolMessage.Scope += $" {AzureAdB2COptions.ApiUri}/{scope}";
+
+                context.ProtocolMessage.ResponseType = OpenIdConnectResponseType.CodeIdToken;
             }
             return Task.FromResult(0);
         }
@@ -66,6 +74,18 @@ namespace WebApp_OpenIDConnect_DotNet
             {
                 context.Response.Redirect("/Home/Error?message=" + context.Failure.Message);
             }
+            return Task.FromResult(0);
+        }
+
+        public Task OnAuthorizationCodeReceived(AuthorizationCodeReceivedContext context)
+        {
+            // Tell the middleware we'll be redeeming the code ourselves
+            // so that we can use MSAL's caching and refresh logic.
+            context.HandleCodeRedemption();
+
+            // Use MSAL to swap the code for an access token
+            // await AcquireContextAsync(..., AzureAdB2COptions.ClientSecret, context.TokenEndpointRequest.Code);   
+            
             return Task.FromResult(0);
         }
     }
