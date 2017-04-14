@@ -184,4 +184,5 @@ UpgradeLog*.htm
 FakesAssemblies/
 
 .vs/
+.vscode/
 artifacts/
