@@ -21,13 +21,6 @@ namespace WebApp_OpenIDConnect_DotNet.Controllers
             return View();
         }
 
-        public IActionResult Contact()
-        {
-            ViewData["Message"] = "Your contact page.";
-
-            return View();
-        }
-
         public IActionResult Error(string message)
         {
             ViewBag.Message = message;
