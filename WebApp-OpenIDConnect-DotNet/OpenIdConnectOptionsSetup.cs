@@ -25,8 +25,6 @@ namespace WebApp_OpenIDConnect_DotNet
             options.ClientId = AzureAdB2COptions.ClientId;
             options.Authority = AzureAdB2COptions.Authority;
             
-
-            // TODO: Is this needed? Is the default sufficient?
             options.TokenValidationParameters = new TokenValidationParameters() { NameClaimType = "name" };
 
             options.Events = new OpenIdConnectEvents()
@@ -36,7 +34,7 @@ namespace WebApp_OpenIDConnect_DotNet
             };
         }
 
-        public async Task OnRedirectToIdentityProvider(RedirectContext context)
+        public Task OnRedirectToIdentityProvider(RedirectContext context)
         {
             var defaultPolicy = AzureAdB2COptions.DefaultPolicy;
             if (context.Properties.Items.TryGetValue(AzureAdB2COptions.PolicyAuthenticationProperty, out var policy) && 
@@ -47,9 +45,10 @@ namespace WebApp_OpenIDConnect_DotNet
                 context.ProtocolMessage.IssuerAddress = context.ProtocolMessage.IssuerAddress.Replace(defaultPolicy, policy);
                 context.Properties.Items.Remove(AzureAdB2COptions.PolicyAuthenticationProperty);
             }
+            return Task.FromResult(0);
         }
 
-        public async Task OnRemoteFailure(FailureContext context)
+        public Task OnRemoteFailure(FailureContext context)
         {
             context.HandleResponse();
             // Handle the error code that Azure AD B2C throws when trying to reset a password from the login page 
@@ -67,6 +66,7 @@ namespace WebApp_OpenIDConnect_DotNet
             {
                 context.Response.Redirect("/Home/Error?message=" + context.Failure.Message);
             }
+            return Task.FromResult(0);
         }
     }
 }
