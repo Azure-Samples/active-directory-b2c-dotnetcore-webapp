@@ -59,7 +59,6 @@ Now you can replace the app's default configuration with your own.  Open the `ap
     "AzureAdB2C": {
       "ClientId": "90c0fe63-bcf2-44d5-8fb7-b8bbc0b29dc6",
       "Tenant": "fabrikamb2c.onmicrosoft.com",
-      "RedirectUri": "https://localhost:44316/",
       "SignUpSignInPolicyId": "b2c_1_susi",
       "ResetPasswordPolicyId": "b2c_1_reset"
     }
