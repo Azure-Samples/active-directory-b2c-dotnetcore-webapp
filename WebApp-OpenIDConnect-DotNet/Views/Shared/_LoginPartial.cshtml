@@ -2,6 +2,8 @@
 {
     <ul class="nav navbar-nav navbar-right">
         <li class="navbar-text">Hello @User.Identity.Name!</li>
+        <li><a asp-area="" asp-controller="Session" asp-action="EditProfile">Edit Profile</a></li>
+        <li><a asp-area="" asp-controller="Session" asp-action="ResetPassword">Reset Password</a></li>
         <li><a asp-area="" asp-controller="Session" asp-action="SignOut">Sign out</a></li>
     </ul>
 }
