@@ -1,16 +1,13 @@
-﻿@using System.Security.Principal
-
-@if (User.Identity.IsAuthenticated)
+﻿@if (User.Identity.IsAuthenticated)
 {
     <ul class="nav navbar-nav navbar-right">
-        <li><a>Hello, @User.Identity.Name</a></li>
-        <li>@Html.ActionLink("Log Out", "LogOff", "Account")</li>
+        <li class="navbar-text">Hello @User.Identity.Name!</li>
+        <li><a asp-area="" asp-controller="Session" asp-action="SignOut">Sign out</a></li>
     </ul>
 }
 else
 {
     <ul class="nav navbar-nav navbar-right">
-        <li>@Html.ActionLink("Sign in", "SignIn", "Account")</li>
-        <li>@Html.ActionLink("Sign up", "SignUp", "Account")</li>
+        <li><a asp-area="" asp-controller="Session" asp-action="SignIn">Sign in</a></li>
     </ul>
 }

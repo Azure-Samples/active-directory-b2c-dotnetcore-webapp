@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace WebApp_OpenIDConnect_DotNet.Controllers
 {
@@ -31,7 +31,7 @@ namespace WebApp_OpenIDConnect_DotNet.Controllers
         public IActionResult Error(string message)
         {
             ViewBag.Message = message;
-            return View("~/Views/Shared/Error.cshtml");
+            return View();
         }
     }
 }
