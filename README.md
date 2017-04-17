@@ -60,7 +60,8 @@ Now you can replace the app's default configuration with your own.  Open the `ap
       "ClientId": "90c0fe63-bcf2-44d5-8fb7-b8bbc0b29dc6",
       "Tenant": "fabrikamb2c.onmicrosoft.com",
       "SignUpSignInPolicyId": "b2c_1_susi",
-      "ResetPasswordPolicyId": "b2c_1_reset"
+      "ResetPasswordPolicyId": "b2c_1_reset",
+      "EditProfilePolicyId": "b2c_1_edit_profile"
     }
   }
 }
