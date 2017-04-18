@@ -24,7 +24,7 @@ namespace WebApp_OpenIDConnect_DotNet
         {
             options.ClientId = AzureAdB2COptions.ClientId;
             options.Authority = AzureAdB2COptions.Authority;
-            
+            options.UseTokenLifetime = true;
             options.TokenValidationParameters = new TokenValidationParameters() { NameClaimType = "name" };
 
             options.Events = new OpenIdConnectEvents()
