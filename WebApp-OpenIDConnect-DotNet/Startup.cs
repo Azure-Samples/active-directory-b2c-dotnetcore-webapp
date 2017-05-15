@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Http;
 
 namespace WebApp_OpenIDConnect_DotNet
 {
@@ -29,13 +30,23 @@ namespace WebApp_OpenIDConnect_DotNet
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.Configure<AzureAdB2COptions>(Configuration.GetSection("Authentication:AzureAdB2C"));
+            services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+
             // Add framework services.
             services.AddMvc();
+            
+            // Adds a default in-memory implementation of IDistributedCache.
+            services.AddDistributedMemoryCache();
+            services.AddSession(options =>
+            {
+                options.IdleTimeout = TimeSpan.FromHours(1);
+                options.CookieHttpOnly = true;
+            });
 
             services.AddAuthentication(
                 sharedOptions => sharedOptions.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme);
 
-            services.Configure<AzureAdB2COptions>(Configuration.GetSection("Authentication:AzureAdB2C"));
             services.AddSingleton<IConfigureOptions<OpenIdConnectOptions>, OpenIdConnectOptionsSetup>();
         }
 
@@ -56,7 +67,9 @@ namespace WebApp_OpenIDConnect_DotNet
             }
 
             app.UseStaticFiles();
-
+            
+            app.UseSession();
+            
             app.UseCookieAuthentication();
 
             app.UseOpenIdConnectAuthentication();
