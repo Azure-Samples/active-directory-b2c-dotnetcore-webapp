@@ -8,11 +8,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.Identity.Client;
+using WebApp_OpenIDConnect_DotNet.Models;
+using System.Security.Claims;
 
 namespace WebApp_OpenIDConnect_DotNet
 {
     public class OpenIdConnectOptionsSetup : IConfigureOptions<OpenIdConnectOptions>
     {
+
         public OpenIdConnectOptionsSetup(IOptions<AzureAdB2COptions> b2cOptions)
         {
             AzureAdB2COptions = b2cOptions.Value;
@@ -46,11 +50,8 @@ namespace WebApp_OpenIDConnect_DotNet
                 context.ProtocolMessage.IssuerAddress = context.ProtocolMessage.IssuerAddress.Replace(defaultPolicy, policy);
                 context.Properties.Items.Remove(AzureAdB2COptions.PolicyAuthenticationProperty);
             }
-            else if (!string.IsNullOrEmpty(AzureAdB2COptions.ApiUri)) {
-                context.ProtocolMessage.Scope = OpenIdConnectScope.OpenIdProfile;
-                foreach (var scope in AzureAdB2COptions.ApiScopes.Split(' ')) 
-                    context.ProtocolMessage.Scope += $" {AzureAdB2COptions.ApiUri}/{scope}";
-
+            else if (!string.IsNullOrEmpty(AzureAdB2COptions.ApiUrl)) {
+                context.ProtocolMessage.Scope += $" offline_access {AzureAdB2COptions.ApiScopes}";
                 context.ProtocolMessage.ResponseType = OpenIdConnectResponseType.CodeIdToken;
             }
             return Task.FromResult(0);
@@ -77,16 +78,27 @@ namespace WebApp_OpenIDConnect_DotNet
             return Task.FromResult(0);
         }
 
-        public Task OnAuthorizationCodeReceived(AuthorizationCodeReceivedContext context)
+        public async Task OnAuthorizationCodeReceived(AuthorizationCodeReceivedContext context)
         {
-            // Tell the middleware we'll be redeeming the code ourselves
-            // so that we can use MSAL's caching and refresh logic.
-            context.HandleCodeRedemption();
-
             // Use MSAL to swap the code for an access token
-            // await AcquireContextAsync(..., AzureAdB2COptions.ClientSecret, context.TokenEndpointRequest.Code);   
-            
-            return Task.FromResult(0);
+             // Extract the code from the response notification
+            var code = context.ProtocolMessage.Code;
+
+            string signedInUserID = context.Ticket.Principal.FindFirst(ClaimTypes.NameIdentifier).Value;
+            TokenCache userTokenCache = new MSALSessionCache(signedInUserID, context.HttpContext).GetMsalCacheInstance();
+            ConfidentialClientApplication cca = new ConfidentialClientApplication(AzureAdB2COptions.ClientId, AzureAdB2COptions.Authority, AzureAdB2COptions.RedirectUri, new ClientCredential(AzureAdB2COptions.ClientSecret), userTokenCache, null);
+            try
+            {
+                AuthenticationResult result = await cca.AcquireTokenByAuthorizationCodeAsync(code, AzureAdB2COptions.ApiScopes.Split(' '));
+
+                   
+                context.HandleCodeRedemption(result.AccessToken, result.IdToken);
+            }
+            catch (Exception ex)
+            {
+                //TODO: Handle
+                throw;
+            }
         }
     }
 }

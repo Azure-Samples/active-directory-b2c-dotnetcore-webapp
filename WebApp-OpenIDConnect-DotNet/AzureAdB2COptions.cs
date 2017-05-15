@@ -22,12 +22,13 @@ namespace WebApp_OpenIDConnect_DotNet
         public string SignUpPolicyId { get; set; }
         public string ResetPasswordPolicyId { get; set; }
         public string EditProfilePolicyId { get; set; }
+        public string RedirectUri { get; set; }
 
         public string DefaultPolicy => SignUpSignInPolicyId;
         public string Authority => $"{AzureAdB2CInstance}/{Tenant}/{DefaultPolicy}/v2.0";
 
         public string ClientSecret { get; set; }
-        public string ApiUri { get; set; }
+        public string ApiUrl { get; set; }
         public string ApiScopes { get; set; }
     }
 }
