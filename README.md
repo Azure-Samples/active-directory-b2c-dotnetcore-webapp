@@ -70,3 +70,110 @@ Now you can replace the app's default configuration with your own.  Open the `ap
 ### Step 7:  Run the sample
 
 Clean the solution, rebuild the solution, and run it.  You can now sign up & sign in to your application using the accounts you configured in your respective policies
+
+## About the code
+
+Here there's a quick guide to the most interesting authentication related bits of the sample.
+
+### Sign in 
+
+As it is standard practice for ASP.NET Core MVC apps, the sign in functionality is implemented with the OpenID Connect OWIN middleware. Here there's a relevant snippet from the middleware initialization:  
+
+```
+  // In Startup.cs
+  public void ConfigureServices(IServiceCollection services)
+  {
+    //...
+    services.Configure<AzureAdB2COptions>(Configuration.GetSection("Authentication:AzureAdB2C"));
+    services.AddSingleton<IConfigureOptions<OpenIdConnectOptions>, OpenIdConnectOptionsSetup>();
+  }
+  
+  // In OpenIdConnectOptionsSetup.cs
+  public void Configure(OpenIdConnectOptions options)
+  {
+    options.ClientId = AzureAdB2COptions.ClientId;
+    options.Authority = AzureAdB2COptions.Authority;
+    options.UseTokenLifetime = true;
+    options.TokenValidationParameters = new TokenValidationParameters() { NameClaimType = "name" };
+    options.Events = new OpenIdConnectEvents()
+    {
+      OnRedirectToIdentityProvider = OnRedirectToIdentityProvider,
+      OnRemoteFailure = OnRemoteFailure,
+      OnAuthorizationCodeReceived = OnAuthorizationCodeReceived
+    };
+  }
+  
+  // In AzureAdB2COptions.cs
+  public class AzureAdB2COptions
+  {
+    public const string PolicyAuthenticationProperty = "Policy";
+
+    public AzureAdB2COptions()
+    {
+      AzureAdB2CInstance = "https://login.microsoftonline.com/tfp";
+    }
+
+    public string ClientId { get; set; }
+    public string AzureAdB2CInstance { get; set; }
+    public string Tenant { get; set; }
+    public string SignUpSignInPolicyId { get; set; }
+    public string SignInPolicyId { get; set; }
+    public string SignUpPolicyId { get; set; }
+    public string ResetPasswordPolicyId { get; set; }
+    public string EditProfilePolicyId { get; set; }
+
+    public string DefaultPolicy => SignUpSignInPolicyId;
+    public string Authority => $"{AzureAdB2CInstance}/{Tenant}/{DefaultPolicy}/v2.0";
+    
+    public string ClientSecret { get; set; }
+    public string ApiUrl { get; set; }
+    public string ApiScopes { get; set; }
+  }
+```
+Important things to notice:
+- The Authority points is constructed using the **tfp** path, the tenant name and the default (sign-up/sign-in) policy.
+- The OnRedirectToIdentityProvider notification is used in order to support EditProfile and Password Reset.
+- The OnRemoteFailure notification is used in order to support Password Reset.
+- The OnAuthorizationCodeReceived notification is used to redeem the access code using MSAL.
+
+### Initial token acquisition
+
+This sample makes use of OpenId Connect hybrid flow, where at authentication time the app receives both sign in info (the id_token) and artifacts (in this case, an authorization code) that the app can use for obtaining an access token. That token can be used to access other resources - in this sample, the a Demo web API which echoes back the user's name.
+This sample shows how to use MSAL to redeem the authorization code into an access token, which is saved in a cache along with any other useful artifact (such as associated refresh_tokens) so that it can be used later on in the application.
+The redemption takes place in the `AuthorizationCodeReceived` notification of the authorization middleware. Here there's the relevant code:
+
+```
+var code = context.ProtocolMessage.Code;
+string signedInUserID = context.Ticket.Principal.FindFirst(ClaimTypes.NameIdentifier).Value;
+TokenCache userTokenCache = new MSALSessionCache(signedInUserID, context.HttpContext).GetMsalCacheInstance();
+
+ConfidentialClientApplication cca = new ConfidentialClientApplication(AzureAdB2COptions.ClientId, AzureAdB2COptions.Authority, AzureAdB2COptions.RedirectUri, new ClientCredential(AzureAdB2COptions.ClientSecret), userTokenCache, null);
+
+try
+{
+  AuthenticationResult result = await cca.AcquireTokenByAuthorizationCodeAsync(code, AzureAdB2COptions.ApiScopes.Split(' '));
+  context.HandleCodeRedemption(result.AccessToken, result.IdToken);
+```
+
+Important things to notice:
+- The `ConfidentialClientApplication` is the primitive that MSAL uses to model the application. As such, it is initialized with the main application's coordinates.
+- `MSALSessionCache` is a sample implementation of a custom MSAL token cache, which saves tokens in the current HTTP session. In a real-life application, you would likely want to save tokens in a long lived store instead, so that you don't need to retrieve new ones more often than necessary.
+- The scope requested by `AcquireTokenByAuthorizationCodeAsync` is just the one required for invoking the API targeted by the application as part of its essential features. We'll see later that the app allows for extra scopes, but you can ignore those at this point. 
+
+### Using access tokens in the app, handling token expiration
+
+The `Api` action in the `HomeController` class demonstrates how to take advantage of MSAL for getting access to protected API easily and securely. Here there's the relevant code:
+
+```
+var scope = AzureAdB2COptions.ApiScopes.Split(' ');
+string signedInUserID = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier).Value;
+TokenCache userTokenCache = new MSALSessionCache(signedInUserID, this.HttpContext).GetMsalCacheInstance();
+
+ConfidentialClientApplication cca = new ConfidentialClientApplication(AzureAdB2COptions.ClientId, AzureAdB2COptions.Authority, AzureAdB2COptions.RedirectUri, new ClientCredential(AzureAdB2COptions.ClientSecret), userTokenCache, null);
+AuthenticationResult result = await cca.AcquireTokenSilentAsync(scope, cca.Users.FirstOrDefault(), AzureAdB2COptions.Authority, false);
+```
+
+The idea is very simple. The code creates a new instance of `ConfidentialClientApplication` with the exact same coordinates as the ones used when redeeming the authorization code at authentication time. In particular, note that the exact same cache is used.
+That done, all you need to do is to invoke `AcquireTokenSilentAsync`, asking for the scopes you need. MSAL will look up the cache and return any cached token which match with the requirement. If such access tokens are expired or no suitable access tokens are present, but there is an associated refresh token, MSAL will automatically use that to get a new access token and return it transparently.    
+
+In the case in which refresh tokens are not present or they fail to obtain a new access token, MSAL will throw `MsalUiRequiredException`. That means that in order to obtain the requested token, the user must go through an interactive experience.
