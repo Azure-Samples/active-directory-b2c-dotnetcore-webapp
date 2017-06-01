@@ -21,7 +21,9 @@ Getting started is simple! To run this sample you will need:
 
 From your shell or command line:
 
-`git clone https://github.com/Azure-Samples/active-directory-dotnet-webapp-openidconnect-aspnetcore-b2c.git`
+```powershell
+git clone https://github.com/Azure-Samples/active-directory-dotnet-webapp-openidconnect-aspnetcore-b2c.git
+```
 
 ### Step 2: Run the sample using our sample tenant
 
@@ -79,7 +81,7 @@ Here there's a quick guide to the most interesting authentication related bits o
 
 As it is standard practice for ASP.NET Core MVC apps, the sign in functionality is implemented with the OpenID Connect OWIN middleware. Here there's a relevant snippet from the middleware initialization:  
 
-```
+```csharp
   // In Startup.cs
   public void ConfigureServices(IServiceCollection services)
   {
@@ -142,7 +144,7 @@ This sample makes use of OpenId Connect hybrid flow, where at authentication tim
 This sample shows how to use MSAL to redeem the authorization code into an access token, which is saved in a cache along with any other useful artifact (such as associated refresh_tokens) so that it can be used later on in the application.
 The redemption takes place in the `AuthorizationCodeReceived` notification of the authorization middleware. Here there's the relevant code:
 
-```
+```csharp
 var code = context.ProtocolMessage.Code;
 string signedInUserID = context.Ticket.Principal.FindFirst(ClaimTypes.NameIdentifier).Value;
 TokenCache userTokenCache = new MSALSessionCache(signedInUserID, context.HttpContext).GetMsalCacheInstance();
@@ -164,7 +166,7 @@ Important things to notice:
 
 The `Api` action in the `HomeController` class demonstrates how to take advantage of MSAL for getting access to protected API easily and securely. Here there's the relevant code:
 
-```
+```csharp
 var scope = AzureAdB2COptions.ApiScopes.Split(' ');
 string signedInUserID = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier).Value;
 TokenCache userTokenCache = new MSALSessionCache(signedInUserID, this.HttpContext).GetMsalCacheInstance();
