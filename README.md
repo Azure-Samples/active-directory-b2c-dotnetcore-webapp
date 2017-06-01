@@ -13,7 +13,7 @@ The app is a dead simple web application that performs three functions: sign-in,
 
 Getting started is simple! To run this sample you will need:
 
-- To install .NET Core for Windows by following the instructions at [dot.net/core](http://dot.net/core), which will include Visual Studio 2015 Update 3.
+- To install .NET Core for Windows by following the instructions at [dot.net/core](http://dot.net/core), which will include Visual Studio 2017.
 - An Internet connection
 - An Azure subscription (a free trial is sufficient)
 
@@ -25,35 +25,52 @@ From your shell or command line:
 git clone https://github.com/Azure-Samples/active-directory-dotnet-webapp-openidconnect-aspnetcore-b2c.git
 ```
 
-### Step 2: Run the sample using our sample tenant
-
-If you'd like to see the sample working immediately, you can simply run the app as-is without any code changes. Open the solution in Visual Studio, and run the app.  Visual Studio should take care of restoring the necessary packages and launching the application using IIS Express.
-
-The default configuration for this application performs sign-in & sign-up using our sample B2C tenant, `fabrikamb2c.onmicrosoft.com`.  It uses a single [policy](https://azure.microsoft.com/documentation/articles/active-directory-b2c-reference-policies) (`b2c_1_susi`) for handling both sign-in and sign-up. Sign up for the app using any of the available account types, and try signing in again with the same account.
-
-### Step 3: Get your own Azure AD B2C tenant
+### [OPTIONAL] Step 2: Get your own Azure AD B2C tenant
 
 You can also modify the sample to use your own Azure AD B2C tenant.  First, you'll need to create an Azure AD B2C tenant by following [these instructions](https://azure.microsoft.com/documentation/articles/active-directory-b2c-get-started).
 
-### Step 4: Create your own policies
+> *IMPORTANT*: if you choose to perform one of the optional steps, you have to perform ALL of them for the sample to work as expected.
 
-This sample uses a single sign-in and sign-up policy. Create the policy by following [the instructions here](https://azure.microsoft.com/documentation/articles/active-directory-b2c-reference-policies).  You may choose to include as many or as few identity providers as you wish; our sample policies use Facebook, Google, and email-based local accounts.
+### [OPTIONAL] Step 3: Create your own policies
 
-When you create a sign-up or sign-in policy (with local accounts), the consumer will see a "Forgot password?" link on the first page of the experience. Clicking on this link doesn't automatically trigger a password reset policy. Instead a specific error code AADB2C90118 is returned back to your app. Your app needs to handle this and invoke a specific password reset policy as shown in this sample. To enable this flow you will also need to create a password reset policy.
+This sample uses three types of policies: a unified sign-up/sign-in policy, a profile editing policy and a password reset policy.  Create one policy of each type by following [the instructions here](https://azure.microsoft.com/documentation/articles/active-directory-b2c-reference-policies).  You may choose to include as many or as few identity providers as you wish.
 
-If you already have existing policies in your B2C tenant, feel free to re-use those. No need to create new ones just for this sample.
+If you already have existing policies in your Azure AD B2C tenant, feel free to re-use those.  No need to create new ones just for this sample.
 
-### Step 5: Create your own application
+### [OPTIONAL] Step 4: Create your own Web API
 
-Now you need to create your own appliation in your B2C tenant, so that your app has its own client ID.  You can do so following [the generic instructions here](https://azure.microsoft.com/documentation/articles/active-directory-b2c-app-registration). Be sure to include the following information in your app registration:
+This sample calls an API at https://fabrikamb2chello.azurewebsites.net which has the same code as the sample [Node.js Web API with Azure AD B2C](https://github.com/Azure-Samples/active-directory-b2c-javascript-nodejs-webapi). You'll need your own API or at the very least, you'll need to [register a Web API with Azure AD B2C](https://docs.microsoft.com/azure/active-directory-b2c/active-directory-b2c-app-registration#register-a-web-api) so that you can define the scopes that your single page application will request access tokens for. 
+
+Your web API registration should include the following information:
 
 - Enable the **Web App/Web API** setting for your application.
-- Add the redirect URI for your app: `https://localhost:44316/signin-oidc`.
-- Copy the client ID generated for your application, so you can use it in the next step.
+- Set the **Reply URL** to the appropriate value indicated in the sample or provide any URL if you're only doing the web api registration, for example `https://myapi`.
+- Make sure you also provide a **AppID URI**, for example `demoapi`, this is used to construct the scopes that are configured in you single page application's code.
+- (Optional) Once you're app is created, open the app's **Published Scopes** blade and add any extra scopes you want.
+- Copy the **AppID URI** and **Published Scopes values**, so you can input them in your application's code.
 
-### Step 6: Configure the sample to use your B2C tenant
+### [OPTIONAL] Step 5: Create your own Web app
 
-Now you can replace the app's default configuration with your own.  Open the `appsettings.json` file and replace the following values with the ones you created in the previous steps. 
+Now you need to [register your web app in your B2C tenant](https://docs.microsoft.com/azure/active-directory-b2c/active-directory-b2c-app-registration#register-a-web-application), so that it has its own Application ID. Don't forget to grant your application API Access to the web API you registered in the previous step.
+
+Your native application registration should include the following information:
+
+- Enable the **Web App/Web API** setting for your application.
+- Set the **Reply URL** to `https://localhost:5000/signin-oidc`.
+- Once your app is created, open the app's **Keys** blade and click on **Generate Key** and **Save**, copy this key so that you can used it in the next step.
+- Once your app is created, open the app's **API access** blade and **Add** the API you created in the previous step.
+- Copy the Application ID generated for your application, so you can use it in the next step.
+
+### [OPTIONAL] Step 6: Configure the sample with your app coordinates
+
+1. Open the solution in Visual Studio.
+1. Open the `appsettings.json` file.
+1. Find the assignment for `Tenant` and replace the value with your tenant name.
+1. Find the assignment for `ClientID` and replace the value with the Application ID from Step 2.
+1. Find the assignment for each of the policies `XPolicyId` and replace the names of the policies you created in Step 3.
+1. Find the assignment for `ClientSecret` and replace the value with App Key you created in Step 5.
+1. Find the assignment for `ApiUrl` and replace the value with the URL of the API that you registered in Step 4.
+1. Find the assignment for the `ApiScopes` and replace the scopes with those you created in Step 4.
 
 ```json
 {
@@ -63,7 +80,11 @@ Now you can replace the app's default configuration with your own.  Open the `ap
       "Tenant": "fabrikamb2c.onmicrosoft.com",
       "SignUpSignInPolicyId": "b2c_1_susi",
       "ResetPasswordPolicyId": "b2c_1_reset",
-      "EditProfilePolicyId": "b2c_1_edit_profile"
+      "EditProfilePolicyId": "b2c_1_edit_profile",
+      "RedirectUri": "http://localhost:5000/signin-oidc",
+      "ClientSecret" : "v0WzLXB(uITV5*Aq",
+      "ApiUrl": "https://fabrikamb2chello.azurewebsites.net/hello",
+      "ApiScopes": "https://fabrikamb2c.onmicrosoft.com/demoapi/demo.read"
     }
   }
 }
@@ -71,7 +92,7 @@ Now you can replace the app's default configuration with your own.  Open the `ap
 
 ### Step 7:  Run the sample
 
-Clean the solution, rebuild the solution, and run it.  You can now sign up & sign in to your application using the accounts you configured in your respective policies
+Clean the solution, rebuild the solution, and run it.  You can now sign up & sign in to your application using the accounts you configured in your respective policies.
 
 ## About the code
 
