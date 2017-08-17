@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 
 namespace WebApp_OpenIDConnect_DotNet
 {
@@ -30,8 +31,15 @@ namespace WebApp_OpenIDConnect_DotNet
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.Configure<AzureAdB2COptions>(Configuration.GetSection("Authentication:AzureAdB2C"));
             services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+
+            services.AddAuthentication(sharedOptions =>
+            {
+                sharedOptions.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                sharedOptions.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+            })
+            .AddAzureAdB2C(options => Configuration.Bind("Authentication:AzureAdB2C", options))
+            .AddCookie();
 
             // Add framework services.
             services.AddMvc();
@@ -44,10 +52,7 @@ namespace WebApp_OpenIDConnect_DotNet
                 options.CookieHttpOnly = true;
             });
 
-            services.AddAuthentication(
-                sharedOptions => sharedOptions.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme);
-
-            services.AddSingleton<IConfigureOptions<OpenIdConnectOptions>, OpenIdConnectOptionsSetup>();
+            
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -69,10 +74,8 @@ namespace WebApp_OpenIDConnect_DotNet
             app.UseStaticFiles();
             
             app.UseSession();
-            
-            app.UseCookieAuthentication();
 
-            app.UseOpenIdConnectAuthentication();
+            app.UseAuthentication();
 
             app.UseMvc(routes =>
             {
