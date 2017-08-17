@@ -4,11 +4,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using Microsoft.AspNetCore.Http.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Http.Features.Authentication;
+using Microsoft.AspNetCore.Authentication;
 
 namespace WebApp_OpenIDConnect_DotNet.Controllers
 {
@@ -22,42 +22,49 @@ namespace WebApp_OpenIDConnect_DotNet.Controllers
         public AzureAdB2COptions AzureAdB2COptions { get; set; }
 
         [HttpGet]
-        public async Task SignIn()
+        public IActionResult SignIn()
         {
-            await HttpContext.Authentication.ChallengeAsync(
-                OpenIdConnectDefaults.AuthenticationScheme, new AuthenticationProperties { RedirectUri = "/" });
+            var redirectUrl = Url.Action(nameof(HomeController.Index), "Home");
+            return Challenge(
+                new AuthenticationProperties { RedirectUri = redirectUrl },
+                OpenIdConnectDefaults.AuthenticationScheme);
         }
 
         [HttpGet]
-        public async Task ResetPassword()
+        public IActionResult ResetPassword()
         {
-            var properties = new AuthenticationProperties() { RedirectUri = "/"  };
+            var redirectUrl = Url.Action(nameof(HomeController.Index), "Home");
+            var properties = new AuthenticationProperties { RedirectUri = redirectUrl };
             properties.Items[AzureAdB2COptions.PolicyAuthenticationProperty] = AzureAdB2COptions.ResetPasswordPolicyId;
-            await HttpContext.Authentication.ChallengeAsync(
-                OpenIdConnectDefaults.AuthenticationScheme, properties, ChallengeBehavior.Unauthorized);
+            return Challenge(properties, OpenIdConnectDefaults.AuthenticationScheme);
         }
 
         [HttpGet]
-        public async Task EditProfile()
+        public IActionResult EditProfile()
         {
-            var properties = new AuthenticationProperties() { RedirectUri = "/" };
+            var redirectUrl = Url.Action(nameof(HomeController.Index), "Home");
+            var properties = new AuthenticationProperties { RedirectUri = redirectUrl };
             properties.Items[AzureAdB2COptions.PolicyAuthenticationProperty] = AzureAdB2COptions.EditProfilePolicyId;
-            await HttpContext.Authentication.ChallengeAsync(
-                OpenIdConnectDefaults.AuthenticationScheme, properties, ChallengeBehavior.Unauthorized);
+            return Challenge(properties, OpenIdConnectDefaults.AuthenticationScheme);
         }
 
         [HttpGet]
         public IActionResult SignOut()
         {
-            return SignOut(
-                new AuthenticationProperties { RedirectUri = Url.Action("SignedOut") },
-                CookieAuthenticationDefaults.AuthenticationScheme,
-                OpenIdConnectDefaults.AuthenticationScheme);
+            var callbackUrl = Url.Action(nameof(SignedOut), "Session", values: null, protocol: Request.Scheme);
+            return SignOut(new AuthenticationProperties { RedirectUri = callbackUrl },
+                CookieAuthenticationDefaults.AuthenticationScheme, OpenIdConnectDefaults.AuthenticationScheme);
         }
 
         [HttpGet]
         public IActionResult SignedOut()
         {
+            if (User.Identity.IsAuthenticated)
+            {
+                // Redirect to home page if the user is authenticated.
+                return RedirectToAction(nameof(HomeController.Index), "Home");
+            }
+
             return View();
         }
     }
