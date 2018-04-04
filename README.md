@@ -66,7 +66,7 @@ Your native application registration should include the following information:
 1. Open the solution in Visual Studio.
 1. Open the `appsettings.json` file.
 1. Find the assignment for `Tenant` and replace the value with your tenant name.
-1. Find the assignment for `ClientID` and replace the value with the Application ID from Step 2.
+1. Find the assignment for `ClientID` and replace the value with the Application ID from Step 5.
 1. Find the assignment for each of the policies `XPolicyId` and replace the names of the policies you created in Step 3.
 1. Find the assignment for `ClientSecret` and replace the value with App Key you created in Step 5.
 1. Find the assignment for `ApiUrl` and replace the value with the URL of the API that you registered in Step 4.
