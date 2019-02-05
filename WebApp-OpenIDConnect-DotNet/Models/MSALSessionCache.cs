@@ -48,16 +48,17 @@ namespace WebApp_OpenIDConnect_DotNet.Models
         public void Load()
         {
             SessionLock.EnterReadLock();
-            cache.Deserialize(httpContext.Session.Get(CacheId));
+            byte[] blob = httpContext.Session.Get(CacheId);
+            if(blob != null)
+            {
+                cache.Deserialize(blob);
+            }
             SessionLock.ExitReadLock();
         }
 
         public void Persist()
         {
             SessionLock.EnterWriteLock();
-
-            // Optimistically set HasStateChanged to false. We need to do it early to avoid losing changes made by a concurrent thread.
-            cache.HasStateChanged = false;
 
             // Reflect changes in the persistent store
             httpContext.Session.Set(CacheId, cache.Serialize());
@@ -75,7 +76,7 @@ namespace WebApp_OpenIDConnect_DotNet.Models
         void AfterAccessNotification(TokenCacheNotificationArgs args)
         {
             // if the access operation resulted in a cache update
-            if (cache.HasStateChanged)
+            if (args.HasStateChanged)
             {
                 Persist();
             }
