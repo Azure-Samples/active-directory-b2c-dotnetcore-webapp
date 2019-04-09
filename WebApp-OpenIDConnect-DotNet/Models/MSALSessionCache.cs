@@ -2,6 +2,7 @@ using Microsoft.Identity.Client;
 
 using System.Threading;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace WebApp_OpenIDConnect_DotNet.Models
 {
@@ -12,7 +13,7 @@ namespace WebApp_OpenIDConnect_DotNet.Models
         string CacheId = string.Empty;
         HttpContext httpContext = null;
 
-        TokenCache cache = new TokenCache();
+        ITokenCache cache;
 
         public MSALSessionCache(string userId, HttpContext httpcontext)
         {
@@ -23,8 +24,9 @@ namespace WebApp_OpenIDConnect_DotNet.Models
             Load();
         }
 
-        public TokenCache GetMsalCacheInstance()
+        public ITokenCache EnablePersistence(ITokenCache cache)
         {
+            this.cache = cache;
             cache.SetBeforeAccess(BeforeAccessNotification);
             cache.SetAfterAccess(AfterAccessNotification);
             Load();
@@ -51,7 +53,7 @@ namespace WebApp_OpenIDConnect_DotNet.Models
             byte[] blob = httpContext.Session.Get(CacheId);
             if(blob != null)
             {
-                cache.Deserialize(blob);
+                cache.DeserializeMsalV3(blob);
             }
             SessionLock.ExitReadLock();
         }
@@ -61,7 +63,7 @@ namespace WebApp_OpenIDConnect_DotNet.Models
             SessionLock.EnterWriteLock();
 
             // Reflect changes in the persistent store
-            httpContext.Session.Set(CacheId, cache.Serialize());
+            httpContext.Session.Set(CacheId, cache.SerializeMsalV3());
             SessionLock.ExitWriteLock();
         }
 

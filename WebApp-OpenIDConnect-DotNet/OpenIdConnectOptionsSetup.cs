@@ -107,11 +107,17 @@ namespace WebApp_OpenIDConnect_DotNet
                 var code = context.ProtocolMessage.Code;
 
                 string signedInUserID = context.Principal.FindFirst(ClaimTypes.NameIdentifier).Value;
-                TokenCache userTokenCache = new MSALSessionCache(signedInUserID, context.HttpContext).GetMsalCacheInstance();
-                ConfidentialClientApplication cca = new ConfidentialClientApplication(AzureAdB2COptions.ClientId, AzureAdB2COptions.Authority, AzureAdB2COptions.RedirectUri, new ClientCredential(AzureAdB2COptions.ClientSecret), userTokenCache, null);
+                IConfidentialClientApplication cca = ConfidentialClientApplicationBuilder.Create(AzureAdB2COptions.ClientId)
+                    .WithB2CAuthority(AzureAdB2COptions.Authority)
+                    .WithRedirectUri(AzureAdB2COptions.RedirectUri)
+                    .WithClientSecret(AzureAdB2COptions.ClientSecret)
+                    .Build();
+                new MSALSessionCache(signedInUserID, context.HttpContext).EnablePersistence(cca.UserTokenCache);
+
                 try
                 {
-                    AuthenticationResult result = await cca.AcquireTokenByAuthorizationCodeAsync(code, AzureAdB2COptions.ApiScopes.Split(' '));
+                    AuthenticationResult result = await cca.AcquireTokenByAuthorizationCode(AzureAdB2COptions.ApiScopes.Split(' '), code)
+                        .ExecuteAsync();
 
 
                     context.HandleCodeRedemption(result.AccessToken, result.IdToken);

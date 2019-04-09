@@ -44,11 +44,18 @@ namespace WebApp_OpenIDConnect_DotNet.Controllers
                 // Retrieve the token with the specified scopes
                 var scope = AzureAdB2COptions.ApiScopes.Split(' ');
                 string signedInUserID = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier).Value;
-                TokenCache userTokenCache = new MSALSessionCache(signedInUserID, this.HttpContext).GetMsalCacheInstance();
-                ConfidentialClientApplication cca = new ConfidentialClientApplication(AzureAdB2COptions.ClientId, AzureAdB2COptions.Authority, AzureAdB2COptions.RedirectUri, new ClientCredential(AzureAdB2COptions.ClientSecret), userTokenCache, null);
+
+                IConfidentialClientApplication cca =
+                ConfidentialClientApplicationBuilder.Create(AzureAdB2COptions.ClientId)
+                    .WithRedirectUri(AzureAdB2COptions.RedirectUri)
+                    .WithClientSecret(AzureAdB2COptions.ClientSecret)
+                    .WithB2CAuthority(AzureAdB2COptions.Authority)
+                    .Build();
+                new MSALSessionCache(signedInUserID, this.HttpContext).EnablePersistence(cca.UserTokenCache);
 
                 var accounts = await cca.GetAccountsAsync();
-                AuthenticationResult result = await cca.AcquireTokenSilentAsync(scope, accounts.FirstOrDefault(), AzureAdB2COptions.Authority, false);
+                AuthenticationResult result = await cca.AcquireTokenSilent(scope, accounts.FirstOrDefault())
+                    .ExecuteAsync();
 
                 HttpClient client = new HttpClient();
                 HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, AzureAdB2COptions.ApiUrl);
