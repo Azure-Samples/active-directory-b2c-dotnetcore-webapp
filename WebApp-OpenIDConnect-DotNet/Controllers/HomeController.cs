@@ -51,7 +51,7 @@ namespace WebApp_OpenIDConnect_DotNet.Controllers
                     .WithClientSecret(AzureAdB2COptions.ClientSecret)
                     .WithB2CAuthority(AzureAdB2COptions.Authority)
                     .Build();
-                new MSALSessionCache(signedInUserID, this.HttpContext).EnablePersistence(cca.UserTokenCache);
+                new MSALStaticCache(signedInUserID, this.HttpContext).EnablePersistence(cca.UserTokenCache);
 
                 var accounts = await cca.GetAccountsAsync();
                 AuthenticationResult result = await cca.AcquireTokenSilent(scope, accounts.FirstOrDefault())

@@ -112,7 +112,7 @@ namespace WebApp_OpenIDConnect_DotNet
                     .WithRedirectUri(AzureAdB2COptions.RedirectUri)
                     .WithClientSecret(AzureAdB2COptions.ClientSecret)
                     .Build();
-                new MSALSessionCache(signedInUserID, context.HttpContext).EnablePersistence(cca.UserTokenCache);
+                new MSALStaticCache(signedInUserID, context.HttpContext).EnablePersistence(cca.UserTokenCache);
 
                 try
                 {
