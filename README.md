@@ -166,37 +166,56 @@ This sample shows how to use MSAL to redeem the authorization code into an acces
 The redemption takes place in the `AuthorizationCodeReceived` notification of the authorization middleware. Here there's the relevant code:
 
 ```csharp
+// Use MSAL to swap the code for an access token
+// Extract the code from the response notification
 var code = context.ProtocolMessage.Code;
-string signedInUserID = context.Ticket.Principal.FindFirst(ClaimTypes.NameIdentifier).Value;
-TokenCache userTokenCache = new MSALSessionCache(signedInUserID, context.HttpContext).GetMsalCacheInstance();
 
-ConfidentialClientApplication cca = new ConfidentialClientApplication(AzureAdB2COptions.ClientId, AzureAdB2COptions.Authority, AzureAdB2COptions.RedirectUri, new ClientCredential(AzureAdB2COptions.ClientSecret), userTokenCache, null);
+string signedInUserID = context.Principal.FindFirst(ClaimTypes.NameIdentifier).Value;
+IConfidentialClientApplication cca = ConfidentialClientApplicationBuilder.Create(AzureAdB2COptions.ClientId)
+    .WithB2CAuthority(AzureAdB2COptions.Authority)
+    .WithRedirectUri(AzureAdB2COptions.RedirectUri)
+    .WithClientSecret(AzureAdB2COptions.ClientSecret)
+    .Build();
+ new MSALStaticCache(signedInUserID, context.HttpContext).EnablePersistence(cca.UserTokenCache);
 
 try
 {
-  AuthenticationResult result = await cca.AcquireTokenByAuthorizationCodeAsync(code, AzureAdB2COptions.ApiScopes.Split(' '));
-  context.HandleCodeRedemption(result.AccessToken, result.IdToken);
+    AuthenticationResult result = await cca.AcquireTokenByAuthorizationCode(AzureAdB2COptions.ApiScopes.Split(' '), code)
+        .ExecuteAsync();
+
+
+    context.HandleCodeRedemption(result.AccessToken, result.IdToken);
+}
 ```
 
 Important things to notice:
-- The `ConfidentialClientApplication` is the primitive that MSAL uses to model the application. As such, it is initialized with the main application's coordinates.
-- `MSALSessionCache` is a sample implementation of a custom MSAL token cache, which saves tokens in the current HTTP session. In a real-life application, you would likely want to save tokens in a long lived store instead, so that you don't need to retrieve new ones more often than necessary.
-- The scope requested by `AcquireTokenByAuthorizationCodeAsync` is just the one required for invoking the API targeted by the application as part of its essential features. We'll see later that the app allows for extra scopes, but you can ignore those at this point. 
+- The `IConfidentialClientApplication` is the interface that MSAL uses to model the application. As such, it is initialized with the main application's coordinates.
+- `MSALStaticCache` is a sample implementation of a custom MSAL token cache, which saves tokens in memory. In a real-life application, you would likely want to save tokens in a long lived store instead, so that you don't need to retrieve new ones more often than necessary. For examples of such caches see [ASP.NET Core Web app tutorial | Token caches](https://github.com/Azure-Samples/active-directory-aspnetcore-webapp-openidconnect-v2/tree/master/2-WebApp-graph-user/2-2-TokenCache)
+- The scope requested by `AcquireTokenByAuthorizationCode` is just the one required for invoking the API targeted by the application as part of its essential features. We'll see later that the app allows for extra scopes, but you can ignore those at this point. 
 
 ### Using access tokens in the app, handling token expiration
 
 The `Api` action in the `HomeController` class demonstrates how to take advantage of MSAL for getting access to protected API easily and securely. Here there's the relevant code:
 
 ```csharp
+// Retrieve the token with the specified scopes
 var scope = AzureAdB2COptions.ApiScopes.Split(' ');
 string signedInUserID = HttpContext.User.FindFirst(ClaimTypes.NameIdentifier).Value;
-TokenCache userTokenCache = new MSALSessionCache(signedInUserID, this.HttpContext).GetMsalCacheInstance();
 
-ConfidentialClientApplication cca = new ConfidentialClientApplication(AzureAdB2COptions.ClientId, AzureAdB2COptions.Authority, AzureAdB2COptions.RedirectUri, new ClientCredential(AzureAdB2COptions.ClientSecret), userTokenCache, null);
-AuthenticationResult result = await cca.AcquireTokenSilentAsync(scope, cca.Users.FirstOrDefault(), AzureAdB2COptions.Authority, false);
+IConfidentialClientApplication cca =
+ConfidentialClientApplicationBuilder.Create(AzureAdB2COptions.ClientId)
+    .WithRedirectUri(AzureAdB2COptions.RedirectUri)
+    .WithClientSecret(AzureAdB2COptions.ClientSecret)
+    .WithB2CAuthority(AzureAdB2COptions.Authority)
+    .Build();
+new MSALStaticCache(signedInUserID, this.HttpContext).EnablePersistence(cca.UserTokenCache);
+
+var accounts = await cca.GetAccountsAsync();
+AuthenticationResult result = await cca.AcquireTokenSilent(scope, accounts.FirstOrDefault())
+    .ExecuteAsync();
 ```
 
-The idea is very simple. The code creates a new instance of `ConfidentialClientApplication` with the exact same coordinates as the ones used when redeeming the authorization code at authentication time. In particular, note that the exact same cache is used.
-That done, all you need to do is to invoke `AcquireTokenSilentAsync`, asking for the scopes you need. MSAL will look up the cache and return any cached token which match with the requirement. If such access tokens are expired or no suitable access tokens are present, but there is an associated refresh token, MSAL will automatically use that to get a new access token and return it transparently.    
+The idea is very simple. The code creates a new instance of `IConfidentialClientApplication` with the exact same coordinates as the ones used when redeeming the authorization code at authentication time. In particular, note that the exact same cache is used.
+That done, all you need to do is to invoke `AcquireTokenSilent`, asking for the scopes you need. MSAL will look up the cache and return any cached token which match with the requirement. If such access tokens are expired or no suitable access tokens are present, but there is an associated refresh token, MSAL will automatically use that to get a new access token and return it transparently.    
 
 In the case in which refresh tokens are not present or they fail to obtain a new access token, MSAL will throw `MsalUiRequiredException`. That means that in order to obtain the requested token, the user must go through an interactive experience.

@@ -3,11 +3,14 @@ using Microsoft.Identity.Client;
 using System.Threading;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
+using System.Collections.Generic;
 
 namespace WebApp_OpenIDConnect_DotNet.Models
 {
-    public class MSALSessionCache
+    public class MSALStaticCache
     {
+        private static Dictionary<string, byte[]> staticCache = new Dictionary<string, byte[]>();
+
         private static ReaderWriterLockSlim SessionLock = new ReaderWriterLockSlim(LockRecursionPolicy.NoRecursion);
         string UserId = string.Empty;
         string CacheId = string.Empty;
@@ -15,13 +18,12 @@ namespace WebApp_OpenIDConnect_DotNet.Models
 
         ITokenCache cache;
 
-        public MSALSessionCache(string userId, HttpContext httpcontext)
+        public MSALStaticCache(string userId, HttpContext httpcontext)
         {
             // not object, we want the SUB
             UserId = userId;
             CacheId = UserId + "_TokenCache";
             httpContext = httpcontext;
-            Load();
         }
 
         public ITokenCache EnablePersistence(ITokenCache cache)
@@ -33,24 +35,10 @@ namespace WebApp_OpenIDConnect_DotNet.Models
             return cache;
         }
 
-        public void SaveUserStateValue(string state)
-        {
-            SessionLock.EnterWriteLock();
-            httpContext.Session.SetString(CacheId + "_state", state);
-            SessionLock.ExitWriteLock();
-        }
-        public string ReadUserStateValue()
-        {
-            string state = string.Empty;
-            SessionLock.EnterReadLock();
-            state = (string)httpContext.Session.GetString(CacheId + "_state");
-            SessionLock.ExitReadLock();
-            return state;
-        }
         public void Load()
         {
             SessionLock.EnterReadLock();
-            byte[] blob = httpContext.Session.Get(CacheId);
+            byte[] blob = staticCache.ContainsKey(CacheId) ? staticCache[CacheId] : null ;
             if(blob != null)
             {
                 cache.DeserializeMsalV3(blob);
@@ -63,7 +51,7 @@ namespace WebApp_OpenIDConnect_DotNet.Models
             SessionLock.EnterWriteLock();
 
             // Reflect changes in the persistent store
-            httpContext.Session.Set(CacheId, cache.SerializeMsalV3());
+            staticCache[CacheId] = cache.SerializeMsalV3();
             SessionLock.ExitWriteLock();
         }
 

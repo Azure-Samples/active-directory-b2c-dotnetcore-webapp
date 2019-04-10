@@ -19,6 +19,7 @@ namespace WebApp_OpenIDConnect_DotNet
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                 .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true)
                 .AddEnvironmentVariables();
+
             Configuration = builder.Build();
         }
 
@@ -45,7 +46,8 @@ namespace WebApp_OpenIDConnect_DotNet
             services.AddSession(options =>
             {
                 options.IdleTimeout = TimeSpan.FromHours(1);
-                options.CookieHttpOnly = true;
+                options.Cookie.HttpOnly = true;
+                options.Cookie.IsEssential = true;
             });
 
             
@@ -54,6 +56,7 @@ namespace WebApp_OpenIDConnect_DotNet
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
         {
+            loggerFactory.AddConsole();
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             loggerFactory.AddDebug();
 
