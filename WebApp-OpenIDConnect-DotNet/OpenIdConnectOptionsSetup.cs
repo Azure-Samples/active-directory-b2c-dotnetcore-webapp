@@ -95,7 +95,7 @@ namespace WebApp_OpenIDConnect_DotNet
                 }
                 else
                 {
-                    context.Response.Redirect("/Home/Error?message=" + context.Failure.Message);
+                    context.Response.Redirect("/Home/Error?message=" + Uri.EscapeDataString(context.Failure.Message));
                 }
                 return Task.FromResult(0);
             }
