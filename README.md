@@ -1,10 +1,11 @@
 ---
 page_type: sample
-description: How to build an MVC web application that performs identity management with Azure AD B2C using the ASP.Net Core OpenID Connect middleware.
+description: "How to build an MVC web application that performs identity management with Azure AD B2C using the ASP.Net Core OpenID Connect middleware."
 languages:
   - csharp
 products:
   - dotnet-core
+  - azure
   - azure-active-directory
 ---
 
