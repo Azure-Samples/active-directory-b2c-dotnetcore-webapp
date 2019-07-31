@@ -5,6 +5,7 @@ languages:
   - csharp
 products:
   - dotnet-core
+  - aspnet-core
   - azure
   - azure-active-directory
 ---
