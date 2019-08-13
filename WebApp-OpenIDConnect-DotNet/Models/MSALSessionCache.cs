@@ -11,9 +11,8 @@ namespace WebApp_OpenIDConnect_DotNet.Models
         private static ReaderWriterLockSlim SessionLock = new ReaderWriterLockSlim(LockRecursionPolicy.NoRecursion);
         string UserId = string.Empty;
         string CacheId = string.Empty;
-        HttpContext httpContext = null;
-
-        ITokenCache cache;
+        private readonly HttpContext httpContext = null;
+        private ITokenCache cache;
 
         public MSALSessionCache(string userId, HttpContext httpcontext)
         {
@@ -21,7 +20,6 @@ namespace WebApp_OpenIDConnect_DotNet.Models
             UserId = userId;
             CacheId = UserId + "_TokenCache";
             httpContext = httpcontext;
-            Load();
         }
 
         public ITokenCache EnablePersistence(ITokenCache cache)
@@ -29,7 +27,6 @@ namespace WebApp_OpenIDConnect_DotNet.Models
             this.cache = cache;
             cache.SetBeforeAccess(BeforeAccessNotification);
             cache.SetAfterAccess(AfterAccessNotification);
-            Load();
             return cache;
         }
 
@@ -47,23 +44,23 @@ namespace WebApp_OpenIDConnect_DotNet.Models
             SessionLock.ExitReadLock();
             return state;
         }
-        public void Load()
+        public void Load(TokenCacheNotificationArgs args)
         {
             SessionLock.EnterReadLock();
             byte[] blob = httpContext.Session.Get(CacheId);
             if(blob != null)
             {
-                cache.DeserializeMsalV3(blob);
+                args.TokenCache.DeserializeMsalV3(blob);
             }
             SessionLock.ExitReadLock();
         }
 
-        public void Persist()
+        public void Persist(TokenCacheNotificationArgs args)
         {
             SessionLock.EnterWriteLock();
 
             // Reflect changes in the persistent store
-            httpContext.Session.Set(CacheId, cache.SerializeMsalV3());
+            httpContext.Session.Set(CacheId, args.TokenCache.SerializeMsalV3());
             SessionLock.ExitWriteLock();
         }
 
@@ -71,7 +68,7 @@ namespace WebApp_OpenIDConnect_DotNet.Models
         // Reload the cache from the persistent store in case it changed since the last access.
         void BeforeAccessNotification(TokenCacheNotificationArgs args)
         {
-            Load();
+            Load(args);
         }
 
         // Triggered right after MSAL accessed the cache.
@@ -80,7 +77,7 @@ namespace WebApp_OpenIDConnect_DotNet.Models
             // if the access operation resulted in a cache update
             if (args.HasStateChanged)
             {
-                Persist();
+                Persist(args);
             }
         }
     }
