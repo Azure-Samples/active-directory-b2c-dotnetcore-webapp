@@ -2,26 +2,29 @@ using Microsoft.Identity.Client;
 
 using System.Threading;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Caching.Memory;
 using System.Collections.Generic;
 
 namespace WebApp_OpenIDConnect_DotNet.Models
 {
+    /// <summary>
+    /// This implementation is just for demo purposes and does not scale. For better cache implementations see 
+    /// https://github.com/Azure-Samples/active-directory-aspnetcore-webapp-openidconnect-v2/tree/master/2-WebApp-graph-user/2-1-Call-MSGraph
+    /// </summary>
     public class MSALStaticCache
     {
         private static Dictionary<string, byte[]> staticCache = new Dictionary<string, byte[]>();
 
         private static ReaderWriterLockSlim SessionLock = new ReaderWriterLockSlim(LockRecursionPolicy.NoRecursion);
-        string UserId = string.Empty;
-        string CacheId = string.Empty;
+        private readonly string userId = string.Empty;
+        private readonly string cacheId = string.Empty;
         private readonly HttpContext httpContext = null;
         private ITokenCache cache;
 
         public MSALStaticCache(string userId, HttpContext httpcontext)
         {
             // not object, we want the SUB
-            UserId = userId;
-            CacheId = UserId + "_TokenCache";
+            this.userId = userId;
+            cacheId = this.userId + "_TokenCache";
             httpContext = httpcontext;
         }
 
@@ -36,7 +39,7 @@ namespace WebApp_OpenIDConnect_DotNet.Models
         public void Load(TokenCacheNotificationArgs args)
         {
             SessionLock.EnterReadLock();
-            byte[] blob = staticCache.ContainsKey(CacheId) ? staticCache[CacheId] : null ;
+            byte[] blob = staticCache.ContainsKey(cacheId) ? staticCache[cacheId] : null ;
             if(blob != null)
             {
                 args.TokenCache.DeserializeMsalV3(blob);
@@ -49,7 +52,7 @@ namespace WebApp_OpenIDConnect_DotNet.Models
             SessionLock.EnterWriteLock();
 
             // Reflect changes in the persistent store
-            staticCache[CacheId] = args.TokenCache.SerializeMsalV3();
+            staticCache[cacheId] = args.TokenCache.SerializeMsalV3();
             SessionLock.ExitWriteLock();
         }
 
