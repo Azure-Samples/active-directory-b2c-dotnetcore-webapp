@@ -31,7 +31,7 @@ namespace WebApp_OpenIDConnect_DotNet.Controllers
         [Authorize]
         public IActionResult About()
         {
-            ViewData["Message"] = String.Format("Claims available for the user {0}", (User.FindFirst("name")?.Value));
+            ViewData["Message"] = string.Format("Claims available for the user {0}", (User.FindFirst("name")?.Value));
             return View();
         }
 

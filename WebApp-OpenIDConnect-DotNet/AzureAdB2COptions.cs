@@ -11,7 +11,7 @@ namespace WebApp_OpenIDConnect_DotNet
 
         public AzureAdB2COptions()
         {
-            AzureAdB2CInstance = "https://login.microsoftonline.com/tfp";
+            AzureAdB2CInstance = "https://fabrikamb2c.b2clogin.com/tfp";
         }
 
         public string ClientId { get; set; }
